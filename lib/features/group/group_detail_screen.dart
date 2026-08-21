@@ -4,14 +4,17 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../core/analytics.dart';
 import '../../core/cached_video.dart';
 import '../../core/jst.dart';
+import '../../core/supabase_client.dart';
 import '../../core/widgets/heart_animation_overlay.dart';
 import '../../models/app_user.dart';
 import '../../models/group.dart';
+import '../home/home_provider.dart';
 import '../post/recorded_video_view.dart';
 import 'group_provider.dart';
 
@@ -43,6 +46,7 @@ class GroupDetailScreen extends ConsumerStatefulWidget {
 class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
   late DateTime _date;
   late int _hour;
+  bool _leaving = false;
 
   @override
   void initState() {
@@ -245,6 +249,17 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                     );
                   },
                 ),
+                const Divider(height: 24),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.exit_to_app),
+                  title: const Text('グループを脱退'),
+                  enabled: !_leaving,
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    _confirmLeaveGroup();
+                  },
+                ),
               ],
             ),
           ),
@@ -259,6 +274,53 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
       leading: _Avatar(name: member.name, radius: 18),
       title: Text(member.name),
     );
+  }
+
+  Future<void> _confirmLeaveGroup() async {
+    if (supabase.auth.currentUser == null || _leaving) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('グループを脱退しますか？'),
+        content: const Text('このグループから脱退します。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('キャンセル'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('脱退する'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _leaving = true);
+    try {
+      await ref.read(groupServiceProvider).leaveGroup(widget.groupId);
+      if (!mounted) return;
+      ref.invalidate(myGroupsProvider);
+      context.go('/home');
+    } catch (error) {
+      if (!mounted) return;
+      _showMessage(_leaveErrorMessage(error));
+    } finally {
+      if (mounted) setState(() => _leaving = false);
+    }
+  }
+
+  String _leaveErrorMessage(Object error) {
+    if (error is GroupOwnerCannotLeaveException) {
+      return 'オーナーは脱退できません';
+    }
+    return 'グループの脱退に失敗しました';
+  }
+
+  void _showMessage(String text) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 }
 
@@ -394,13 +456,19 @@ class _EmptyMemberCard extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Center(
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 12,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.hourglass_empty, size: 32, color: Colors.grey[400]),
-                const SizedBox(height: 8),
-                Text('まだ投稿していません', style: TextStyle(color: Colors.grey[500])),
+                const _BouncingSmiley(size: 36),
+                const SizedBox(height: 4),
+                Text(
+                  'まだ投稿していません',
+                  style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                ),
               ],
             ),
           ),
@@ -408,6 +476,61 @@ class _EmptyMemberCard extends StatelessWidget {
           _TimeOverlay(label: slotLabel, dark: false),
         ],
       ),
+    );
+  }
+}
+
+// 縦にバウンドしながら拡大縮小するニコちゃんアニメーション。
+class _BouncingSmiley extends StatefulWidget {
+  const _BouncingSmiley({this.size = 40});
+
+  final double size;
+
+  @override
+  State<_BouncingSmiley> createState() => _BouncingSmileyState();
+}
+
+class _BouncingSmileyState extends State<_BouncingSmiley>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _bounce;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+
+    _bounce = Tween<double>(
+      begin: 0,
+      end: -10,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _scale = Tween<double>(
+      begin: 1.0,
+      end: 1.12,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, _bounce.value),
+          child: Transform.scale(scale: _scale.value, child: child),
+        );
+      },
+      child: Text('😊', style: TextStyle(fontSize: widget.size)),
     );
   }
 }

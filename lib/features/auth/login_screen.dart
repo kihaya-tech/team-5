@@ -76,8 +76,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     });
 
+    final fieldRadius = BorderRadius.circular(14);
+
     return Scaffold(
-      appBar: AppBar(title: Text(_isSignUp ? '新規登録' : 'ログイン')),
+      backgroundColor: const Color(0xFFF3F1FB),
+      appBar: AppBar(
+        title: Text(_isSignUp ? '新規登録' : 'ログイン'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -93,9 +100,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'メールアドレス',
-                      border: OutlineInputBorder(),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: fieldRadius,
+                        borderSide: BorderSide.none,
+                      ),
                     ),
                     validator: (v) => (v == null || !v.contains('@'))
                         ? 'メールアドレスを入力してください'
@@ -108,7 +120,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     decoration: InputDecoration(
                       labelText: 'パスワード',
                       helperText: '6文字以上',
-                      border: const OutlineInputBorder(),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: fieldRadius,
+                        borderSide: BorderSide.none,
+                      ),
                       suffixIcon: IconButton(
                         icon: Icon(_obscurePassword
                             ? Icons.visibility_off
@@ -128,9 +145,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     TextFormField(
                       controller: _confirmController,
                       obscureText: _obscurePassword,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'パスワード（確認）',
-                        border: OutlineInputBorder(),
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: fieldRadius,
+                          borderSide: BorderSide.none,
+                        ),
                       ),
                       validator: (v) => (v != _passwordController.text)
                           ? 'パスワードが一致しません'
@@ -140,21 +162,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,
+                    height: 50,
                     child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF6C5CE7),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
                       onPressed: isLoading ? null : _submit,
                       child: isLoading
                           ? const SizedBox(
                               height: 20,
                               width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
                             )
-                          : Text(_isSignUp ? '新規登録' : 'ログイン'),
+                          : Text(
+                              _isSignUp ? '新規登録' : 'ログイン',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
                     ),
                   ),
                   TextButton(
                     onPressed: isLoading ? null : _toggleMode,
                     child: Text(
                       _isSignUp ? 'アカウントをお持ちの方はログイン' : 'アカウントが無い方は新規登録',
+                      style: const TextStyle(color: Color(0xFF6C5CE7)),
                     ),
                   ),
                 ],
@@ -176,16 +217,25 @@ class _LoginHeader extends StatelessWidget {
     final theme = Theme.of(context);
     return Column(
       children: [
-        Icon(
-          Icons.video_camera_front_rounded,
-          size: 56,
-          color: theme.colorScheme.primary,
+        Container(
+          width: 88,
+          height: 88,
+          decoration: const BoxDecoration(
+            color: Color(0xFF6C5CE7),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.video_camera_front_rounded,
+            size: 44,
+            color: Colors.white,
+          ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         Text(
           'Hanalog',
           style: theme.textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.bold,
+            color: const Color(0xFF6C5CE7),
           ),
         ),
         const SizedBox(height: 4),
