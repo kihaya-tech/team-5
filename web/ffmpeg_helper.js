@@ -181,4 +181,109 @@ async function processVideoWeb(inputBytes, stickersJson) {
   }
 }
 
+// AIアバター/シチュエーション動画（2秒のWebM動画）をブラウザのCanvasから完全無料で生成する
+async function generateAIVideoWeb(title, emoji, bgGradientStart, bgGradientEnd) {
+  _log(`AI動画生成開始: ${title} (${emoji})`);
+  const canvas = document.createElement('canvas');
+  canvas.width = 720;
+  canvas.height = 1280;
+  const ctx = canvas.getContext('2d');
+
+  const stream = canvas.captureStream(30);
+  let mimeType = 'video/webm;codecs=vp8';
+  if (!MediaRecorder.isTypeSupported(mimeType)) {
+    mimeType = 'video/webm';
+  }
+  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 2500000 });
+  const chunks = [];
+  recorder.ondataavailable = (e) => {
+    if (e.data && e.data.size > 0) chunks.push(e.data);
+  };
+
+  const recordingFinished = new Promise((resolve) => {
+    recorder.onstop = () => resolve(new Blob(chunks, { type: mimeType }));
+  });
+
+  recorder.start();
+  const startTime = performance.now();
+  const durationMs = 2000;
+
+  await new Promise((resolve) => {
+    function drawFrame(currentTime) {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / durationMs, 1.0);
+
+      // 背景グラデーション
+      const grad = ctx.createLinearGradient(0, 0, 720, 1280);
+      grad.addColorStop(0, bgGradientStart);
+      grad.addColorStop(1, bgGradientEnd);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 720, 1280);
+
+      // 背景の動的な装飾（光の輪）
+      const pulse = Math.sin(progress * Math.PI * 4) * 20;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(360, 600, 220 + pulse, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.fill();
+      ctx.restore();
+
+      // 「AI LOG」バッジ
+      ctx.save();
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.roundRect ? ctx.roundRect(240, 240, 240, 60, 30) : ctx.rect(240, 240, 240, 60);
+      ctx.fill();
+      ctx.font = 'bold 28px sans-serif';
+      ctx.fillStyle = '#2ECDB0';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('✨ AI LOG', 360, 270);
+      ctx.restore();
+
+      // メイン絵文字（ぷるぷる揺れるアニメーション）
+      const bounce = Math.sin(progress * Math.PI * 6) * 25;
+      const angle = Math.sin(progress * Math.PI * 4) * 0.1;
+      ctx.save();
+      ctx.translate(360, 580 + bounce);
+      ctx.rotate(angle);
+      ctx.font = '160px serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(emoji, 0, 0);
+      ctx.restore();
+
+      // タイトルテキスト
+      ctx.save();
+      ctx.font = 'bold 44px sans-serif';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+      ctx.shadowBlur = 12;
+      ctx.fillText(title, 360, 820);
+
+      ctx.font = '30px sans-serif';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.fillText('自動生成された日常ログ', 360, 880);
+      ctx.restore();
+
+      if (progress < 1.0) {
+        requestAnimationFrame(drawFrame);
+      } else {
+        recorder.stop();
+        resolve();
+      }
+    }
+    requestAnimationFrame(drawFrame);
+  });
+
+  const blob = await recordingFinished;
+  const arrayBuffer = await blob.arrayBuffer();
+  _log(`AI動画生成完了: ${arrayBuffer.byteLength} bytes`);
+  return URL.createObjectURL(blob);
+}
+
 window.processVideoWeb = processVideoWeb;
+window.generateAIVideoWeb = generateAIVideoWeb;
+

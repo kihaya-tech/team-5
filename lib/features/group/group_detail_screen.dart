@@ -11,6 +11,7 @@ import '../../core/analytics.dart';
 import '../../core/cached_video.dart';
 import '../../core/jst.dart';
 import '../../core/supabase_client.dart';
+import '../../core/widgets/heart_animation_overlay.dart';
 import '../../models/app_user.dart';
 import '../../models/group.dart';
 import '../home/home_provider.dart';
@@ -404,36 +405,38 @@ class _MemberPostCardState extends State<_MemberPostCard> {
     final controller = _controller;
     // タップは時間移動に使うため、カード自体ではタップを受けない（自動再生・ループ）。
     return _CardFrame(
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          if (_failed)
-            const ColoredBox(
-              color: Colors.black87,
-              child: Center(
-                child: Icon(
-                  Icons.error_outline,
-                  color: Colors.white54,
-                  size: 40,
+      child: HeartAnimationOverlay(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (_failed)
+              const ColoredBox(
+                color: Colors.black87,
+                child: Center(
+                  child: Icon(
+                    Icons.error_outline,
+                    color: Colors.white54,
+                    size: 40,
+                  ),
+                ),
+              )
+            else if (_initialized && controller != null)
+              RecordedVideoView(
+                controller: controller,
+                needsFlip: widget.post.needsFlip,
+                recordedPlatform: widget.post.platform,
+              )
+            else
+              const ColoredBox(
+                color: Colors.black87,
+                child: Center(
+                  child: CircularProgressIndicator(color: Colors.white),
                 ),
               ),
-            )
-          else if (_initialized && controller != null)
-            RecordedVideoView(
-              controller: controller,
-              needsFlip: widget.post.needsFlip,
-              recordedPlatform: widget.post.platform,
-            )
-          else
-            const ColoredBox(
-              color: Colors.black87,
-              child: Center(
-                child: CircularProgressIndicator(color: Colors.white),
-              ),
-            ),
-          _NameOverlay(name: widget.post.userName),
-          _TimeOverlay(label: widget.slotLabel),
-        ],
+            _NameOverlay(name: widget.post.userName),
+            _TimeOverlay(label: widget.slotLabel),
+          ],
+        ),
       ),
     );
   }

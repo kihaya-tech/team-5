@@ -309,13 +309,166 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
     }
   }
 
+  void _showAIGenerationSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF1E1E1E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        final scenarios = [
+          {
+            'title': '☕ カフェでひと息',
+            'emoji': '☕',
+            'bgStart': '#2b1055',
+            'bgEnd': '#7597de',
+          },
+          {
+            'title': '💻 爆速開発中！',
+            'emoji': '💻',
+            'bgStart': '#0f2027',
+            'bgEnd': '#2c5364',
+          },
+          {
+            'title': '😴 もう眠い...',
+            'emoji': '😴',
+            'bgStart': '#141e30',
+            'bgEnd': '#243b55',
+          },
+          {
+            'title': '🍕 ごはんタイム',
+            'emoji': '🍕',
+            'bgStart': '#ff4b1f',
+            'bgEnd': '#ff9068',
+          },
+          {
+            'title': '🎉 ハッカソン最高！',
+            'emoji': '🎉',
+            'bgStart': '#8a2387',
+            'bgEnd': '#f27121',
+          },
+        ];
+
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.auto_awesome, color: Color(0xFF2ECDB0)),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'AIにおまかせ生成',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white54),
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  '今の気分や状況を選ぶと、AIがショート動画を自動作成します。',
+                  style: TextStyle(fontSize: 13, color: Colors.white70),
+                ),
+                const SizedBox(height: 16),
+                for (final item in scenarios)
+                  ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    leading: Text(
+                      item['emoji']!,
+                      style: const TextStyle(fontSize: 32),
+                    ),
+                    title: Text(
+                      item['title']!,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16,
+                      color: Colors.white38,
+                    ),
+                    onTap: () {
+                      Navigator.of(sheetContext).pop();
+                      _generateAIVideo(
+                        title: item['title']!,
+                        emoji: item['emoji']!,
+                        bgStart: item['bgStart']!,
+                        bgEnd: item['bgEnd']!,
+                      );
+                    },
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _generateAIVideo({
+    required String title,
+    required String emoji,
+    required String bgStart,
+    required String bgEnd,
+  }) async {
+    setState(() => _initializing = true);
+    try {
+      if (kIsWeb) {
+        final blobUrl = await generateAIVideoWebImpl(
+          title: title,
+          emoji: emoji,
+          bgStart: bgStart,
+          bgEnd: bgEnd,
+        );
+        ref.read(recordedVideoProvider.notifier).set(
+          RecordedVideo(file: XFile(blobUrl), needsFlip: false),
+        );
+      } else {
+        // ネイティブ用（Web以外）
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('AI動画を生成中...')),
+        );
+      }
+      if (mounted) context.push('/send');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('AI動画の生成に失敗しました: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _initializing = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
         child: _error != null
-            ? _ErrorView(message: _error!, onRetry: _retry)
+            ? _ErrorView(
+                message: _error!,
+                onRetry: _retry,
+                onAIGenerate: _showAIGenerationSheet,
+              )
             : _initializing || _controller == null
             ? const Center(child: CircularProgressIndicator())
             : _buildCameraView(),
@@ -358,6 +511,11 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
               ),
             ),
           ),
+        Positioned(
+          top: 8,
+          left: 8,
+          child: _AIGenerateButton(onTap: _showAIGenerationSheet),
+        ),
         Positioned(
           top: 8,
           right: 8,
@@ -516,10 +674,15 @@ class _TimerButton extends StatelessWidget {
 }
 
 class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.message, required this.onRetry});
+  const _ErrorView({
+    required this.message,
+    required this.onRetry,
+    required this.onAIGenerate,
+  });
 
   final String message;
   final VoidCallback onRetry;
+  final VoidCallback onAIGenerate;
 
   @override
   Widget build(BuildContext context) {
@@ -542,12 +705,59 @@ class _ErrorView extends StatelessWidget {
             icon: const Icon(Icons.refresh),
             label: const Text('再試行'),
           ),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: onAIGenerate,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFF2ECDB0),
+              side: const BorderSide(color: Color(0xFF2ECDB0)),
+            ),
+            icon: const Icon(Icons.auto_awesome),
+            label: const Text('AIにおまかせ生成して投稿'),
+          ),
           const SizedBox(height: 24),
         ],
       ),
     );
   }
 }
+
+class _AIGenerateButton extends StatelessWidget {
+  const _AIGenerateButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.65),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFF2ECDB0), width: 1.5),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.auto_awesome, size: 18, color: Color(0xFF2ECDB0)),
+            SizedBox(width: 6),
+            Text(
+              'AI自動生成',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 
 // availableCameras() がタイムアウトしたことを示す内部例外。
 class _CameraTimeoutException implements Exception {}

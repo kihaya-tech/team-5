@@ -36,7 +36,7 @@ class RecordedVideoView extends StatelessWidget {
           child: SizedBox(
             width: controller.value.size.width,
             height: controller.value.size.height,
-            child: VideoPlayer(controller),
+            child: IgnorePointer(child: VideoPlayer(controller)),
           ),
         ),
       ),
