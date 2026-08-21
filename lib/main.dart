@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/analytics.dart';
 import 'core/router.dart';
 import 'core/supabase_client.dart';
+import 'features/settings/theme_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,14 +52,14 @@ class _StartupErrorApp extends StatelessWidget {
 }
 
 // アプリのルートWidget。
-class HanalogApp extends StatefulWidget {
+class HanalogApp extends ConsumerStatefulWidget {
   const HanalogApp({super.key});
 
   @override
-  State<HanalogApp> createState() => _HanalogAppState();
+  ConsumerState<HanalogApp> createState() => _HanalogAppState();
 }
 
-class _HanalogAppState extends State<HanalogApp> {
+class _HanalogAppState extends ConsumerState<HanalogApp> {
   late final AppLifecycleListener _lifecycleListener;
 
   @override
@@ -88,6 +89,14 @@ class _HanalogAppState extends State<HanalogApp> {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+      ),
+      themeMode: ref.watch(themeModeProvider),
       routerConfig: router,
       builder: _wrapInPhoneFrame,
     );

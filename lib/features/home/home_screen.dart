@@ -11,6 +11,7 @@ import '../../models/group.dart';
 import '../../models/post.dart';
 import '../auth/auth_provider.dart';
 import '../post/recorded_video_view.dart';
+import '../settings/theme_provider.dart';
 import 'home_provider.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -112,6 +113,18 @@ class HomeScreen extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Consumer(
+              builder: (context, ref, _) {
+                final isDark = ref.watch(themeModeProvider) == ThemeMode.dark;
+                return SwitchListTile(
+                  secondary: const Icon(Icons.dark_mode_outlined),
+                  title: const Text('ダークモード'),
+                  value: isDark,
+                  onChanged: (_) =>
+                      ref.read(themeModeProvider.notifier).toggle(),
+                );
+              },
+            ),
             ListTile(
               leading: const Icon(Icons.person),
               title: const Text('プロフィール'),
