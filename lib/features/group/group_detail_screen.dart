@@ -14,6 +14,7 @@ import '../../core/supabase_client.dart';
 import '../../core/widgets/heart_animation_overlay.dart';
 import '../../models/app_user.dart';
 import '../../models/group.dart';
+import '../comment/comment_sheet.dart';
 import '../home/home_provider.dart';
 import '../post/recorded_video_view.dart';
 import 'group_provider.dart';
@@ -435,6 +436,36 @@ class _MemberPostCardState extends State<_MemberPostCard> {
               ),
             _NameOverlay(name: widget.post.userName),
             _TimeOverlay(label: widget.slotLabel),
+            Positioned(
+              right: 12,
+              bottom: 12,
+              child: GestureDetector(
+                onTap: () => showCommentsSheet(context, postId: widget.post.postId),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.chat_bubble_outline, size: 16, color: Colors.white),
+                      SizedBox(width: 4),
+                      Text(
+                        'コメント',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
